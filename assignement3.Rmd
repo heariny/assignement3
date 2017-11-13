@@ -1,0 +1,67 @@
+---
+title: "assignement3"
+author: "yang mengwei"
+date: "11/13/2017"
+output: html_document
+---
+
+###Exercice1
+
+####Task A
+
+```{r}
+target<-c("W1802","J1917","C1687")
+stress_shift_3dict<-dplyr::filter(stressshift::stress_shift_unamb,Dict %in% target)
+stress_shift_3dict
+nrow(stress_shift_3dict)
+```
+
+
+####Task B
+
+#####Magrittr
+magrittr包被定义为一个高效的管道操作工具包，通过管道的连接方式，让数据或表达式的传递更高效，使用操作符%>%，可以直接把数据传递给下一个函数调用或表达式。magrittr包，主要定义了4个管道操作符---》
+*%>%*向右边传输数据结果进行计算,
+*%T>%*向左边传输结果让结果进行下一个运算再加上一个向右边传输的再用这个函数的结果进行另一个运算, *%$%*解释操作符号，把左边的属性名传给右侧，右侧通过名字直接调用函数 *%<>%*复合赋值操作符，必须用在第一个管道的对象处，才能完成赋值操作。
+
+```{r}
+`%>%`<-magrittr::`%>%`
+target<-c("W1802","J1917","C1687")
+stress_shift_3dict_using_pipe<-stressshift::stress_shift_unamb %>% dplyr::filter(Dict %in% target)
+stressshift::stress_shift_unamb %>% dplyr::filter(Dict %in% target) %>% nrow()
+identical(stress_shift_3dict,stress_shift_3dict_using_pipe)
+```
+
+
+####Task C
+
+```{r}
+stress_shift_3dict_nouns<-dplyr::filter(stress_shift_3dict, Category=="Noun")
+stress_shift_3dict_verbs<-dplyr::filter(stress_shift_3dict, Category=="Verb")
+stress_shift_3dict_using_bind<-dplyr::bind_rows(stress_shift_3dict_nouns,stress_shift_3dict_verbs)
+stress_shift_3dict_using_bind_reversed<-dplyr::bind_rows(stress_shift_3dict_verbs,stress_shift_3dict_nouns)
+identical(stress_shift_3dict,stress_shift_3dict_using_bind)
+identical(stress_shift_3dict,stress_shift_3dict_using_bind_reversed)
+identical(stress_shift_3dict_using_bind,stress_shift_3dict_using_bind_reversed)
+nrow(stress_shift_3dict_using_bind)
+nrow(stress_shift_3dict_using_bind_reversed)
+```
+I add two more lines to verify if the stress_shift_3dict_using_bind and stress_shift_3dict_using_bind_reversed are identified as identical, althought I know they have same content, it says still False, so I think the order of every  instance matters, the two identical tables should not only have the same content but also have the same order for instances.But I think when work with these two tables, I'll get the same result, because they have the seme content, and the order dosen't matter when we draw a graph or have a permutation test.
+
+####Task D
+
+
+```{r}
+stress_shift_nouns_renamed<-dplyr::filter(stressshift::stress_shift_unamb,Category=="Noun") %>% dplyr::select(Word,Dict,Syllable) %>% dplyr::rename(Syllable_Noun=Syllable)
+stress_shift_nouns_renamed
+```
+
+Rename(data, New name=Old name)
+
+```{r}
+stress_shift_verbs_renamed<-dplyr::filter(stressshift::stress_shift_unamb,Category=="Verb") %>% dplyr::select(Word,Dict,Syllable) %>% dplyr::rename(Syllable_Verb=Syllable)
+stress_shift_wide<-dplyr::inner_join(stress_shift_nouns_renamed,stress_shift_verbs_renamed)
+stress_shift_wide
+```
+
+According to the explain of inner_join:return all rows from x where there are matching values in y, and all columns from x and y. If there are multiple matches between x and y, all combination of the matches are returned. So it dosen't return the rows frm the first table where there aren't matching value in the seconde table, that' why there are fewer rows in the inner_join table 
