@@ -10,6 +10,7 @@ output: html_document
 ####Task A
 
 ```{r}
+source("Assignement3function.R")
 target<-c("W1802","J1917","C1687")
 stress_shift_3dict<-dplyr::filter(stressshift::stress_shift_unamb,Dict %in% target)
 stress_shift_3dict
@@ -118,12 +119,14 @@ print(difference_in_proportion(stressshift::stress_shift_unamb,"Syllable","Categ
 
 ```{r}
 source("Assignement3function.R")
+
 if(!exists(".Random.seed")) set.seed(NULL)
 previous_seed <- .Random.seed
 set.seed(1)
 ptest_stress <- permutation_twogroups(stressshift::stress_shift_unamb,"Syllable", "Category", "Noun", "Verb",difference_in_proportion,n_samples=99,"Syllable 1")
 set.seed(previous_seed)
 permutation_pvalue_right(ptest_stress)
+
 ptest_d <- tibble::as_tibble(ptest_stress["permuted"])
 p<-ggplot2::ggplot(ptest_d,ggplot2::aes_string(x="permuted",y="(..count..)"))+ggplot2::geom_histogram(fill="yellow",colour="black",binwidth=0.005)+ggplot2::geom_vline(ggplot2::aes(xintercept=median(ptest_stress$observed)))
 
@@ -133,7 +136,106 @@ print(p)
 
 ###Exercice3
 
+####Task A
+
+rbinom(n,size,prob)   n表示生成的随机数数量，size表示进行贝努力试验的次数，prob表示一次贝努力试验成功的概率
+```{r}
+propotion_syllable<-dplyr::group_by(stressshift::stress_shift_unamb,Category) %>% dplyr::summarise(Percent_Syll_1=sum(Syllable=="Syllable 1")/n())
+
+percentage_Syllable_1_Noun<-propotion_syllable$Percent_Syll_1[1]
+percentage_Syllable_1_Verb<-propotion_syllable$Percent_Syll_1[2]
+original_Difference<-percentage_Syllable_1_Noun-percentage_Syllable_1_Verb
+
+rows_syllable<-dplyr::group_by(stressshift::stress_shift_unamb,Category) %>% dplyr::summarise(rows_for_cate=n())
+rows_Noun<-rows_syllable$rows_for_cate[1]
+rows_Verb<-rows_syllable$rows_for_cate[2]
+
+Noun_N_Syll_1<-rbinom(1000,rows_Noun,percentage_Syllable_1_Noun)
+Verb_N_Syll_1<-rbinom(1000,rows_Verb,percentage_Syllable_1_Verb)
+
+
+col_Noun<-list(c(Noun_N_Syll_1/rows_Noun))
+col_Verb<-list(c(Verb_N_Syll_1/rows_Verb))
+
+
+first_Col<-paste0("R", sprintf("%04d", 1:1000))
+stress_shift_replications<-data.frame(first_Col,col_Noun,col_Verb)
+
+col_Name_first_col<-"Identification"
+col_Noun_name<-"Noun_Percent_Syll_1"
+col_Verb_name<-"Verb_Percent_Syll_1"
 
 
 
+names(stress_shift_replications)<-c(col_Name_first_col,col_Noun_name,col_Verb_name)
 
+difference<-stress_shift_replications[2]-stress_shift_replications[3]
+stress_shift_replications<-cbind(stress_shift_replications,di=difference)
+colnames(stress_shift_replications)<-c(col_Name_first_col,col_Noun_name,col_Verb_name,"Difference_in_Proportion")
+
+
+p<-ggplot2::ggplot(stress_shift_replications,ggplot2::aes_string(x="Difference_in_Proportion",y="(..count..)"))+ggplot2::geom_histogram(fill="yellow",colour="black",binwidth=0.005)+ggplot2::geom_vline(ggplot2::aes(xintercept=original_Difference))+ggplot2::xlim(c(-0.1, 0.8))
+
+
+p_2<-ggplot2::ggplot(ptest_d,ggplot2::aes_string(x="permuted",y="(..count..)"))+ggplot2::geom_histogram(fill="yellow",colour="black",binwidth=0.005)+ggplot2::geom_vline(ggplot2::aes(xintercept=median(ptest_stress$observed)))+ggplot2::xlim(c(-0.1, 0.8))
+
+print (p)
+print (p_2)
+
+```
+
+The first graph shows that when simulate 1000 times of experiences based on thes real data, the obersed p-value is in the middle of confidence interval, and the second graph shows that when simulate 99 times of experiences based on  hypothesis that there in no difference between the number of Noun when stress in Syllable 1 and the number of Verb when stress in Syllable 1, the  obersed p-value is far awyas from the zone of distribution of results of permutation test.
+
+####Task B
+
+rep(x,n) x repeat n times
+apply, returns a vector or array or list of values obtained by applying a function to margins of an array of matrix
+
+######Test the function permtest_difference_in_props
+get propose of this function:according to total numbers of ons category and in which the number of Syllable_1 to genera observed value and permuted values 
+```{r}
+
+n_syllable<-dplyr::group_by(stressshift::stress_shift_unamb,Category) %>% dplyr::summarise(Percent_Syll_1=sum(Syllable=="Syllable 1"))
+
+n_Noun<-n_syllable$Percent_Syll_1[1]
+n_Verb<-n_syllable$Percent_Syll_1[1]
+
+print( permtest_difference_in_props(n_Noun,n_Verb,rows_Noun,rows_Verb))
+```
+
+```
+stress_shift_replications <- stress_shift_replications %>%
+dplyr::mutate(
+Permutation_Pvalue=v_pdp_pvalue_right(Noun_N_Syll_1,Verb_N_Syll_1,rows_Noun,rows_Verb))
+stress_shift_replications
+```
+
+Try to run this block,but it takes too long time, I don't know if there is a problem.
+
+```{r}
+source("Assignement3function.R")
+test<-pearson_x2_stat(stressshift::stress_shift_unamb, "Syllable", "Word")
+test
+```
+
+```{r}
+  permutation_test <- function(d, var_to_permute, statistic, n_samples=9, group_var) {
+    observed_statistic <- statistic(d,var_to_permute, group_var)
+    permutation_statistics <- rep(0, n_samples)
+    for (i in 1:n_samples) {
+      d_perm <- randomize(d, var_to_permute)
+      permutation_statistics[i] <- statistic(d_perm,var_to_permute,group_var)
+    }
+    result <- list(observed=observed_statistic,
+                   permuted=permutation_statistics)
+    return(result)
+  }
+res<-permutation_test(stressshift::stress_shift_unamb, "Syllable", pearson_x2_stat,99,"Word")
+
+```
+
+```{r}
+Noun<-dplyr::filter(stressshift::stress_shift_unamb,Category=="Noun")
+res_Noun<-permutation_test(Noun, "Syllable", pearson_x2_stat,99,"Word")
+res_Noun
+```
