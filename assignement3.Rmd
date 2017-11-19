@@ -217,25 +217,31 @@ source("Assignement3function.R")
 test<-pearson_x2_stat(stressshift::stress_shift_unamb, "Syllable", "Word")
 test
 ```
+Just try to get to know how the function works....
 
 ```{r}
-  permutation_test <- function(d, var_to_permute, statistic, n_samples=9, group_var) {
-    observed_statistic <- statistic(d,var_to_permute, group_var)
-    permutation_statistics <- rep(0, n_samples)
-    for (i in 1:n_samples) {
-      d_perm <- randomize(d, var_to_permute)
-      permutation_statistics[i] <- statistic(d_perm,var_to_permute,group_var)
-    }
-    result <- list(observed=observed_statistic,
-                   permuted=permutation_statistics)
-    return(result)
-  }
-res<-permutation_test(stressshift::stress_shift_unamb, "Syllable", pearson_x2_stat,99,"Word")
 
+res<-permutation_test(stressshift::stress_shift_unamb, "Syllable", pearson_x2_stat,99,"Word")
+res
 ```
+
+I don't use the default samples value(9999)s, because it takes too long time to calcule.
 
 ```{r}
 Noun<-dplyr::filter(stressshift::stress_shift_unamb,Category=="Noun")
 res_Noun<-permutation_test(Noun, "Syllable", pearson_x2_stat,99,"Word")
-res_Noun
+
+ptest_d <- tibble::as_tibble(res_Noun["permuted"])
+p3<-ggplot2::ggplot(ptest_d,ggplot2::aes_string(x="permuted",y="(..count..)"))+ggplot2::geom_histogram(fill="yellow",colour="yellow")+ggplot2::geom_vline(ggplot2::aes(xintercept=res_Noun$observed))
+p3
+
+Verb<-dplyr::filter(stressshift::stress_shift_unamb,Category=="Verb")
+res_Verb<-permutation_test(Verb, "Syllable", pearson_x2_stat,99,"Word")
+
+ptest_d <- tibble::as_tibble(res_Verb["permuted"])
+p4<-ggplot2::ggplot(ptest_d,ggplot2::aes_string(x="permuted",y="(..count..)"))+ggplot2::geom_histogram(fill="yellow",colour="yellow")+ggplot2::geom_vline(ggplot2::aes(xintercept=res_Verb$observed))
+p4
+
 ```
+
+From these two graphs, we can see the real value is much bigger than the permutated values,according to the note that "x2_stat" will always get bigger the farther away var is from being independent of grouping_var, the location of stress is not independent of the word for Nouns and Verbs.
